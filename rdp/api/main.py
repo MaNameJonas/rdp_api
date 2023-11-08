@@ -112,3 +112,52 @@ async def startup_event():
     logger.debug("SHUTDOWN: Sensor reader!")
     reader.stop()
     logger.info("SHUTDOWN: Sensor reader completed!")
+
+
+@app.put("/device/{name}/")
+def put_type(id, device: ApiTypes.Device) -> ApiTypes.Device:
+    """PUT request to a device. This api call is used to change/add a device.
+
+    Args:
+        id (int): primary key of the requested value type
+        value_type (ApiTypes.ValueTypeNoID): json object representing the new state of the value type. 
+
+    Raises:
+        HTTPException: Thrown if a value type with the given id cannot be accessed 
+
+    Returns:
+        ApiTypes.ValueType: the requested value type after persisted in the database. 
+    """
+    global crud
+    try:
+        crud.add_or_update_device(id, device_name=device.name, device_location=device.location)
+        return read_device(id)
+    except crud.NoResultFound:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+
+
+@app.get("/device/{id}/")
+def read_device(id: int) -> ApiTypes.Device:
+    """Returns a device type identified by id
+
+    Args:
+        id (int): Primary key of the desired device type
+
+    Raises:
+        HTTPException: Thrown if a device type with the given id cannot be accessed
+
+    Returns:
+        ApiTypes.DeviceType: The desired device type
+    """
+    global crud
+    try:
+        return crud.get_device_type(id)
+    except crud.NoResultFound:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+
+@app.post("/value/")
+def post_value(value: ApiTypes.ValueNoID):
+    crud.add_value(value_time=value.time, value_type=value.value_type_id, value_value=value.value)
+    return "Value added!"

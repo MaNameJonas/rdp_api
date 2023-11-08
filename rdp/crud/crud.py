@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
-from .model import Base, Value, ValueType
+from .model import Base, Value, ValueType, DeviceType
 
 
 class Crud:
@@ -58,7 +58,7 @@ class Crud:
             value_time (int): unix time stamp of the value.
             value_type (int): Valuetype id of the given value. 
             value_value (float): The measurement value as float.
-        """        
+        """
         with Session(self._engine) as session:
             stmt = select(ValueType).where(ValueType.id == value_type)
             db_type = self.add_or_update_value_type(value_type)
@@ -122,3 +122,65 @@ class Crud:
             logging.error(stmt)
 
             return session.scalars(stmt).all()
+
+    def get_device_type(self, device_type_id: int) -> DeviceType:
+        """Get a DeviceType by its primary key (id).
+
+        Args:
+            device_type_id (int): The primary key of the DeviceType to retrieve.
+
+        Returns:
+            DeviceType: The DeviceType object.
+        """
+        with Session(self._engine) as session:
+            stmt = select(DeviceType).where(DeviceType.id == device_type_id)
+            device_type = session.scalars(stmt).one_or_none()
+            if device_type is None:
+                raise NoResultFound(f"DeviceType with id {device_type_id} not found")
+            return device_type
+    
+
+    def add_or_update_device(
+        self,
+        device_type_id: int = None,
+        device_name: str = None,
+        device_location: str = None,
+    ) -> DeviceType:
+        """Update or add a device type.
+
+        Args:
+            device_type_id (int, optional): DeviceType id to be modified (if None, a new DeviceType is added), Defaults to None.
+            device_name (str, optional): Name of the device type to be set or updated. Defaults to None.
+            device_location (str, optional): Location of the device type to be set or updated. Defaults to None.
+
+        Returns:
+            DeviceType: The DeviceType object.
+        """
+        with Session(self._engine) as session:
+            stmt = select(DeviceType).where(DeviceType.id == device_type_id)
+            db_device_type = None
+
+            for device_type in session.scalars(stmt):
+                db_device_type = device_type
+
+            if db_device_type is None:
+                db_device_type = DeviceType(id=device_type_id)
+
+            if device_name:
+                db_device_type.name = device_name
+            elif not db_device_type.name:
+                db_device_type.name = "DEVICE_TYPE_%d" % device_type_id
+
+            if device_location:
+                db_device_type.location = device_location
+            elif not db_device_type.location:
+                db_device_type.location = "DEVICE_LOCATION_%d" % device_type_id
+
+            try:
+                session.add(db_device_type)
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                raise
+
+            return db_device_type

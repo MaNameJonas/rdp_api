@@ -25,6 +25,17 @@ class ValueType(Base):
         return f"ValueType(id={self.id!r}, value_type={self.type_name})"
 
 
+class DeviceType(Base):
+    __tablename__ = "device_type"
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    location: Mapped[str]
+
+    def __repr__(self) -> str:
+        return f"DeviceType(id={self.id!r}, name={self.type_name!r}, location={self.location!r})"
+
+
 class Value(Base):
     __tablename__ = "value"
     id: Mapped[int] = mapped_column(primary_key=True)
